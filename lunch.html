@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+
+
+<title>Data Gue - Lunch</title>
+
+<script src="libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="libs/navigation-1.1/tabsets.js"></script>
+<link href="libs/highlightjs-1.1/textmate.css" rel="stylesheet" />
+<script src="libs/highlightjs-1.1/highlight.js"></script>
+<script src="libs/htmlwidgets-0.8/htmlwidgets.js"></script>
+<link href="libs/vis-4.16.1/vis.min.css" rel="stylesheet" />
+<script src="libs/vis-4.16.1/vis-network.min.js"></script>
+<script src="libs/visNetwork-binding-1.0.1/visNetwork.js"></script>
+<link href="libs/font-awesome-4.5.0/css/font-awesome.min.css" rel="stylesheet" />
+
+<link rel="icon" type="image/png" href="include/favicon.png" />
+
+<!-- google analytics -->
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-9612779-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs && document.readyState && document.readyState === "complete") {
+   window.setTimeout(function() {
+      hljs.initHighlighting();
+   }, 0);
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 51px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+
+.section h2 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h3 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h4 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h5 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h6 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_').toLowerCase();
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+  padding-left: 25px;
+  text-indent: 0;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-inverse  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Data Gue</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">
+    <span class="fa fa-home"></span>
+     
+    Main
+  </a>
+</li>
+<li>
+  <a href="lunch.html">
+    <span class="fa fa-coffee"></span>
+     
+    Lunch
+  </a>
+</li>
+<li>
+  <a href="transportation.html">
+    <span class="fa fa-motorcycle"></span>
+     
+    Transportation
+  </a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/rasyidstat">
+    <span class="fa fa-github"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="https://twitter.com/rasyidstat">
+    <span class="fa fa-twitter"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="https://rasyidridha.com">
+    <span class="fa fa-home"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Data Gue - Lunch</h1>
+<h4 class="date"><em>1 Januari 2017 - 29 Maret 2017</em></h4>
+
+</div>
+
+
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>In this session, I would like to visualize my lunch data which start to be recorded in 2017. There are four main questions regarding to my lunch data such as:</p>
+<ol style="list-style-type: decimal">
+<li>Whom?</li>
+<li>Where?</li>
+<li>What?</li>
+<li>How much?</li>
+</ol>
+</div>
+<div id="preparation" class="section level2">
+<h2>Preparation</h2>
+<pre class="r"><code>library(tidyverse)
+library(readxl)
+library(knitr)
+library(lubridate)
+library(ggalt)
+library(extrafont)
+library(formattable)
+library(hrbrthemes)
+library(viridis)
+loadfonts()
+
+df &lt;- read_excel(paste0(datadir, &quot;/transaction.xlsx&quot;), sheet = &quot;lunch&quot;)
+df &lt;- df %&gt;% mutate(day = wday(date, label = T),
+                    daytype = ifelse(day %in% c(&quot;Sat&quot;, &quot;Sun&quot;), &quot;Weekend&quot;, &quot;Weekday&quot;))
+
+ref &lt;- read_excel(paste0(datadir, &quot;/transaction.xlsx&quot;), sheet = &quot;holiday&quot;)
+ref &lt;- ref %&gt;% select(date, holiday) %&gt;% filter(!is.na(holiday))
+
+gr &lt;- read_excel(paste0(datadir, &quot;/transaction.xlsx&quot;), sheet = &quot;group&quot;)
+
+df &lt;- df %&gt;% mutate(daytype = ifelse(date %in% ref$date, &quot;Holiday&quot;, daytype))
+
+sample_n(filter(df, price&gt;0, with!=&quot;-&quot;), 10) %&gt;% 
+  select(Food=food, Place=place, Price=price, Day=day) %&gt;%
+  mutate(Price=currency(Price, &quot;Rp&quot;, format=&quot;d&quot;)) %&gt;%
+  formattable(list(Price=color_tile(&quot;white&quot;,&quot;orange&quot;),
+                   Day=formatter(&quot;span&quot;,style=x~ifelse(x %in% c(&quot;Sat&quot;,&quot;Sun&quot;),
+                                     style(color=&quot;green&quot;,font.weight=&quot;bold&quot;), NA))
+                   )
+              )</code></pre>
+<table class="table table-condensed">
+<thead>
+<tr>
+<th style="text-align:right;">
+Food
+</th>
+<th style="text-align:right;">
+Place
+</th>
+<th style="text-align:right;">
+Price
+</th>
+<th style="text-align:right;">
+Day
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right;">
+Kapal Selam
+</td>
+<td style="text-align:right;">
+Cawan Putih
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd17d">Rp26,000</span>
+</td>
+<td style="text-align:right;">
+<span>Wed </span>
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+Bakmi
+</td>
+<td style="text-align:right;">
+Mister Bakso Sarinah
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdb99">Rp23,000</span>
+</td>
+<td style="text-align:right;">
+<span>Tues </span>
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+Bakso Campur
+</td>
+<td style="text-align:right;">
+Bakso Malang
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd486">Rp25,000</span>
+</td>
+<td style="text-align:right;">
+<span>Fri </span>
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+Nasi Ayam Bakar
+</td>
+<td style="text-align:right;">
+Nasi Padang Saiyo
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffebc7">Rp18,000</span>
+</td>
+<td style="text-align:right;">
+<span>Tues </span>
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+Nasi Gado-Gado
+</td>
+<td style="text-align:right;">
+Gado-Gado dekat Masjid Sarinah
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff1d9">Rp16,000</span>
+</td>
+<td style="text-align:right;">
+<span>Mon </span>
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+Mi Ramen
+</td>
+<td style="text-align:right;">
+Food Court Lantai Bawah AEON BSD
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffa500">Rp39,500</span>
+</td>
+<td style="text-align:right;">
+<span>Fri </span>
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+Yamin Komplit
+</td>
+<td style="text-align:right;">
+Bakso Semarang
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe1ab">Rp21,000</span>
+</td>
+<td style="text-align:right;">
+<span>Thurs</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+Lontong Sate Ayam
+</td>
+<td style="text-align:right;">
+Sate Ayam dekat Parkiran Masjid Sarinah
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffebc7">Rp18,000</span>
+</td>
+<td style="text-align:right;">
+<span>Thurs</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+Nasi Telur Dadar
+</td>
+<td style="text-align:right;">
+Nasi Padang Sabang Jaya
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">Rp12,000</span>
+</td>
+<td style="text-align:right;">
+<span>Thurs</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+Nasi Lele
+</td>
+<td style="text-align:right;">
+Jajanan Kuliner BSM
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff8ec">Rp14,000</span>
+</td>
+<td style="text-align:right;">
+<span>Fri </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="visualization" class="section level2">
+<h2>Visualization</h2>
+<div id="whom" class="section level3">
+<h3>Whom?</h3>
+<p>The first question is “With whom I have lunch?” or in Bahasa it means “Makan siang dengan siapa?”</p>
+<pre class="r"><code>df_unnest &lt;- df %&gt;%
+  filter(!grepl(&quot;Family|Wak&quot;, with), daytype == &quot;Weekday&quot;) %&gt;%
+  select(date, food, price, with) %&gt;%
+  mutate(with = strsplit(as.character(gsub(&quot; &quot;, &quot;&quot;, with)), &quot;,&quot;)) %&gt;%
+  unnest(with)
+
+df_unnest_with &lt;- df_unnest %&gt;% group_by(with) %&gt;%
+  summarise(n = n(), n_real = sum(ifelse(price &gt; 0, 1, 0)), avg_price = mean(price[price&gt;0])) %&gt;% 
+  arrange(desc(n))
+
+df_unnest_with %&gt;%
+  filter(with != &quot;-&quot;) %&gt;%
+  top_n(10, n) %&gt;%
+  ggplot(aes(n, reorder(with, n))) +
+  geom_lollipop(horizontal = T, size=1.5, color=&quot;steelblue&quot;) +
+  labs(x=&quot;Count&quot;, y=NULL, title=&quot;Makan Siang dengan Siapa?&quot;,
+       subtitle=paste(format(min(df$date), &quot;%d %B %Y&quot;), &quot;-&quot;, format(max(df$date), &quot;%d %B %Y&quot;))) +
+  theme_ipsum_rc(grid=&quot;X&quot;)</code></pre>
+<p><img src="images/whom-1.png" width="850px" /></p>
+<pre class="r"><code>df_comb &lt;- df %&gt;%
+  filter(!grepl(&quot;Family|Wak&quot;, with), daytype == &quot;Weekday&quot;, with != &#39;-&#39;) %&gt;%
+  # mutate(with = paste0(with, &quot;, Edo&quot;)) %&gt;% # include me
+  mutate(id = row_number(date)) %&gt;%
+  select(id, with) %&gt;%
+  mutate(with = strsplit(as.character(gsub(&quot; &quot;, &quot;&quot;, with)), &quot;,&quot;)) %&gt;%
+  unnest(with)
+
+df_comb &lt;- df_comb %&gt;%
+  mutate(with2 = with) %&gt;%
+  group_by(id) %&gt;%
+  expand.grid() %&gt;%
+  distinct() %&gt;%
+  inner_join(df_comb) %&gt;%
+  inner_join(df_comb, by=c(&quot;with2&quot;=&quot;with&quot;, &quot;id&quot;=&quot;id&quot;)) %&gt;%
+  filter(with!=with2)
+
+df_comb %&gt;% 
+  tidyr::expand(with, with2) %&gt;%
+  left_join(
+    df_comb %&gt;%
+      group_by(with, with2) %&gt;%
+      summarise(n = n())
+  ) %&gt;%
+  mutate(n = ifelse(is.na(n), 0, n)) %&gt;%
+  ggplot(aes(with, with2)) +
+  geom_tile(aes(fill = n), color = &quot;white&quot;) + 
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  theme(axis.ticks=element_blank()) +
+  labs(x=NULL, y=NULL) +
+  scale_fill_viridis(name=NULL)</code></pre>
+<p><img src="images/whom-heatmap-1.png" width="850px" /></p>
+<pre class="r"><code>df_comb_grouped &lt;- df_comb %&gt;% group_by(with, with2) %&gt;%
+  tally(sort=T)
+
+library(visNetwork)
+nodes &lt;- df_comb_grouped %&gt;%
+  group_by(with) %&gt;% summarise(n = n()) %&gt;% arrange(desc(n)) %&gt;% 
+  mutate(id=with, label=with, value=n, font.size=value*2) %&gt;% select(-with, -n) %&gt;%
+  inner_join(gr)
+edges &lt;- df_comb_grouped %&gt;%
+  select(from=with, to=with2)
+visNetwork(nodes, edges, width=&#39;800px&#39;, height=&#39;400px&#39;) %&gt;%
+  visLayout(randomSeed = 123)</code></pre>
+<div id="htmlwidget-4fcce16f9d8448af7fb8" style="width:800px;height:400px;" class="visNetwork html-widget"></div>
+<script type="application/json" data-for="htmlwidget-4fcce16f9d8448af7fb8">{"x":{"nodes":{"id":["Dian","Ago","Aziz","Diana","Fifi","Gun","Indri","Pam","Dewa","Dimas","Marcell","Hana","Bli","Felicia","Gilang","Ifi","Aji","Evan","Novi","Yeni","Zaki","Dhika","Mindi","Bima","Dani","Dinda","Fery","Putri","Anad"],"label":["Dian","Ago","Aziz","Diana","Fifi","Gun","Indri","Pam","Dewa","Dimas","Marcell","Hana","Bli","Felicia","Gilang","Ifi","Aji","Evan","Novi","Yeni","Zaki","Dhika","Mindi","Bima","Dani","Dinda","Fery","Putri","Anad"],"value":[14,12,12,11,11,11,11,11,10,10,10,9,8,8,8,8,7,7,7,7,7,5,5,3,3,3,3,3,2],"font.size":[28,24,24,22,22,22,22,22,20,20,20,18,16,16,16,16,14,14,14,14,14,10,10,6,6,6,6,6,4],"group":["Others","CETI","Others","CETI","Others","CETI","Others","Others","CETI","CE","CETI","CE","Others","Others","Others","Others","CE","CE","CE","CE","CETI","Others","Others","Others","Others","Others","Others","Others","Others"]},"edges":{"from":["Ago","Gun","Dewa","Diana","Ago","Dewa","Gun","Marcell","Ago","Dewa","Diana","Gun","Ago","Diana","Diana","Novi","Aziz","Aziz","Bli","Dewa","Dewa","Diana","Fifi","Gun","Marcell","Marcell","Marcell","Novi","Aziz","Aziz","Aziz","Bli","Dian","Fifi","Fifi","Gilang","Indri","Pam","Ago","Ago","Aji","Aziz","Aziz","Bli","Bli","Dewa","Dhika","Dhika","Dhika","Dian","Dian","Diana","Felicia","Fifi","Fifi","Fifi","Gilang","Gilang","Gilang","Gilang","Gun","Gun","Ifi","Ifi","Indri","Indri","Indri","Indri","Indri","Indri","Indri","Marcell","Marcell","Novi","Novi","Pam","Pam","Pam","Pam","Zaki","Zaki","Zaki","Zaki","Zaki","Ago","Ago","Ago","Ago","Ago","Ago","Aji","Aji","Aji","Aji","Aji","Aji","Anad","Anad","Aziz","Aziz","Aziz","Aziz","Aziz","Bima","Bima","Bima","Bli","Bli","Bli","Bli","Dani","Dani","Dani","Dewa","Dewa","Dewa","Dewa","Dhika","Dhika","Dian","Dian","Dian","Dian","Dian","Dian","Dian","Dian","Dian","Dian","Dian","Diana","Diana","Diana","Diana","Diana","Dimas","Dimas","Dimas","Dimas","Dimas","Dimas","Dimas","Dimas","Dimas","Dimas","Dinda","Dinda","Dinda","Evan","Evan","Evan","Evan","Evan","Evan","Evan","Felicia","Felicia","Felicia","Felicia","Felicia","Felicia","Felicia","Fery","Fery","Fery","Fifi","Fifi","Fifi","Fifi","Fifi","Gilang","Gilang","Gilang","Gun","Gun","Gun","Gun","Gun","Hana","Hana","Hana","Hana","Hana","Hana","Hana","Hana","Hana","Ifi","Ifi","Ifi","Ifi","Ifi","Ifi","Indri","Indri","Indri","Marcell","Marcell","Marcell","Marcell","Mindi","Mindi","Mindi","Mindi","Mindi","Novi","Novi","Novi","Pam","Pam","Pam","Pam","Pam","Pam","Putri","Putri","Putri","Yeni","Yeni","Yeni","Yeni","Yeni","Yeni","Yeni","Zaki","Zaki"],"to":["Gun","Ago","Diana","Dewa","Marcell","Gun","Dewa","Ago","Dewa","Ago","Gun","Diana","Diana","Ago","Novi","Diana","Bli","Fifi","Aziz","Marcell","Novi","Marcell","Aziz","Marcell","Dewa","Diana","Gun","Dewa","Dian","Gilang","Pam","Fifi","Aziz","Bli","Indri","Aziz","Fifi","Aziz","Novi","Zaki","Marcell","Dhika","Indri","Gilang","Indri","Zaki","Aziz","Fifi","Pam","Ifi","Indri","Zaki","Indri","Dhika","Gilang","Pam","Bli","Fifi","Indri","Pam","Novi","Zaki","Dian","Indri","Aziz","Bli","Dian","Felicia","Gilang","Ifi","Pam","Aji","Zaki","Ago","Gun","Dhika","Fifi","Gilang","Indri","Ago","Dewa","Diana","Gun","Marcell","Aji","Dani","Dimas","Evan","Fery","Yeni","Ago","Dewa","Diana","Dimas","Hana","Novi","Aziz","Pam","Anad","Bima","Dinda","Felicia","Putri","Aziz","Dian","Gilang","Dhika","Dian","Felicia","Pam","Ago","Fery","Gun","Aji","Dimas","Evan","Yeni","Bli","Gilang","Bima","Bli","Dimas","Dinda","Felicia","Fifi","Gilang","Hana","Mindi","Pam","Putri","Aji","Dimas","Evan","Hana","Yeni","Ago","Aji","Dewa","Dian","Diana","Fifi","Gun","Hana","Ifi","Indri","Aziz","Dian","Putri","Ago","Dewa","Diana","Gun","Marcell","Yeni","Zaki","Aziz","Bli","Dian","Fifi","Ifi","Mindi","Pam","Ago","Dani","Gun","Dian","Dimas","Felicia","Hana","Ifi","Bima","Dhika","Dian","Dani","Dimas","Evan","Fery","Yeni","Aji","Dian","Diana","Dimas","Fifi","Ifi","Indri","Marcell","Novi","Dimas","Felicia","Fifi","Hana","Mindi","Pam","Dimas","Hana","Mindi","Evan","Hana","Novi","Yeni","Dian","Felicia","Ifi","Indri","Pam","Aji","Hana","Marcell","Anad","Bli","Dian","Felicia","Ifi","Mindi","Aziz","Dian","Dinda","Ago","Dewa","Diana","Evan","Gun","Marcell","Zaki","Evan","Yeni"]},"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"randomSeed":123}},"groups":["Others","CETI","CE"],"width":"800px","height":"400px","idselection":{"enabled":false},"byselection":{"enabled":false},"main":null},"evals":[],"jsHooks":[]}</script>
+<p>It is interesting to look at the network visualization of with whom I had lunch. There are two disparate groups seen from that network visualization with two nodes in the arch between those two groups. The size of the nodes indicates the number of degrees that someone have lunch with, under the assumption that it only counts when I have lunch with them.</p>
+</div>
+<div id="where" class="section level3">
+<h3>Where?</h3>
+<p>The second question is “Where do I have lunch?” or in Bahasa it means “Makan siang di mana?”</p>
+<pre class="r"><code>df %&gt;%
+  filter(!grepl(&quot;Family|Wak Jam&quot;, with), daytype == &quot;Weekday&quot;) %&gt;% 
+  group_by(place) %&gt;% 
+  summarise(n = n()) %&gt;% top_n(10, n) %&gt;%
+  ggplot(aes(n, reorder(place, n))) +
+  geom_lollipop(horizontal = T, size=1.5, color=&quot;steelblue&quot;) +
+  labs(x=&quot;Count&quot;, y=NULL, title=&quot;Makan di mana?&quot;,
+       subtitle=paste(format(min(df$date), &quot;%d %B %Y&quot;), &quot;-&quot;, format(max(df$date), &quot;%d %B %Y&quot;))) +
+  theme_ipsum_rc(grid=&quot;X&quot;)</code></pre>
+<p><img src="images/where-1.png" width="850px" /></p>
+</div>
+<div id="what" class="section level3">
+<h3>What?</h3>
+<p>The third question is “What is the food for the lunch?” or in Bahasa it means “Makan siang apa?”</p>
+<pre class="r"><code>df_food &lt;- df %&gt;%
+  select(food, price) %&gt;%
+  mutate(type = ifelse(grepl(&quot;Nasi&quot;, food), &quot;Nasi&quot;, &quot;Bukan Nasi&quot;)) %&gt;%
+  mutate(sup = case_when(grepl(&quot;Nasi Ikan, Ayam, Daging&quot;, .$food) ~ &quot;Others&quot;,
+                         grepl(&quot;Ayam&quot;, .$food) ~ &quot;Ayam&quot;,
+                         grepl(&quot;Telur&quot;, .$food) ~ &quot;Telur&quot;,
+                         grepl(&quot;Lele&quot;, .$food) ~ &quot;Lele&quot;,
+                         grepl(&quot;Rendang&quot;, .$food) ~ &quot;Rendang&quot;,
+                         TRUE ~ &quot;Others&quot;))
+
+df_food %&gt;%
+  group_by(type) %&gt;%
+  summarise(n = n()) %&gt;%
+  mutate(p = round(n/sum(n), 2)) %&gt;%
+  arrange(desc(n)) %&gt;% 
+  kable(col.names = c(&quot;Food Type&quot;, &quot;Count&quot;, &quot;Percentage&quot;)) </code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Food Type</th>
+<th align="right">Count</th>
+<th align="right">Percentage</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Nasi</td>
+<td align="right">78</td>
+<td align="right">0.89</td>
+</tr>
+<tr class="even">
+<td align="left">Bukan Nasi</td>
+<td align="right">10</td>
+<td align="right">0.11</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>df_food %&gt;% 
+  group_by(food) %&gt;%
+  summarise(n = n()) %&gt;%
+  arrange(desc(n)) %&gt;%
+  filter(n != 1) %&gt;%
+  ggplot(aes(reorder(food, n), n, fill=n)) +
+  geom_bar(stat=&quot;identity&quot;) + theme_minimal() +
+  xlab(&quot;Food&quot;) + ylab(&quot;Count&quot;) + coord_flip() + guides(fill=F)</code></pre>
+<p><img src="images/what-1.png" width="672" /></p>
+</div>
+<div id="how-much" class="section level3">
+<h3>How much?</h3>
+<p>The fourth question is “How much the food cost for the lunch?” or in Bahasa it means “Berapa biaya makan siang?”</p>
+<pre class="r"><code>df_food %&gt;% filter(price &gt; 0) %&gt;%
+  ggplot(aes(price)) + 
+  geom_histogram(alpha=.3, color=&quot;steelblue&quot;, fill=&quot;steelblue&quot;) +
+  theme_minimal() + xlab(&quot;Price&quot;) + ylab(&quot;Density&quot;) + 
+  scale_x_continuous(labels = scales::comma) +
+  scale_x_continuous(labels = scales::dollar_format(suffix = &quot;&quot;, prefix = &quot;Rp&quot;)) +
+  labs(x=NULL, y=NULL)</code></pre>
+<p><img src="images/how-much-1.png" width="672" /></p>
+<pre class="r"><code>df_food %&gt;% filter(price &gt; 0) %&gt;%
+  ggplot(aes(sup, price, fill=sup)) + 
+  geom_boxplot(alpha=.3) +
+  theme_minimal() + xlab(&quot;Food Type&quot;) + ylab(&quot;Price&quot;) +
+  coord_flip() + 
+  scale_y_continuous(labels = scales::comma) +
+  scale_y_continuous(labels = scales::dollar_format(suffix = &quot;&quot;, prefix = &quot;Rp&quot;)) +
+  guides(fill=F) + labs(y=NULL)</code></pre>
+<p><img src="images/how-much-2.png" width="672" /></p>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+
+</body>
+</html>

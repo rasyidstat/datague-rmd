@@ -1,0 +1,31 @@
+output_dir: '.'
+navbar:
+  title: "Data Gue"                              
+  type: inverse
+  left:
+    - text: "Main"
+      icon: fa-home
+      href: index.html
+    - text: "Lunch"
+      icon: fa-coffee
+      href: lunch.html
+    - text: "Transportation"
+      icon: fa-motorcycle
+      href: transportation.html 
+  right:                   
+    - icon: fa-github
+      href: https://github.com/rasyidstat
+    - icon: fa-twitter
+      href: https://twitter.com/rasyidstat
+    - icon: fa-home
+      href: https://rasyidridha.com
+output:
+  html_document:
+    self_contained: false
+    theme: cosmo
+    highlight: textmate
+    mathjax: null
+    lib_dir: libs
+    include:
+      in_header: include/head.html
+
