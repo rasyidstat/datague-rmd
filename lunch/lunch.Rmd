@@ -1,0 +1,416 @@
+---
+title: "Data Gue - Lunch"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+## Preparation
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  fig.path="figures/",
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE,
+  dpi = 300
+)
+```
+
+```{r, include=FALSE}
+datadir <- "B:/Cloud/OneDrive/Life Architecture/Sheet"
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(knitr)
+library(lubridate)
+library(ggalt)
+library(extrafont)
+library(hrbrthemes)
+loadfonts()
+
+# read data
+df <- read_excel(paste0(datadir, "/transaction.xlsx"), sheet = "lunch")
+
+# flag weekend / weekday
+df <- df %>% mutate(day = wday(date, label = T),
+                    daytype = ifelse(day %in% c("Sat", "Sun"), "Weekend", "Weekday"))
+
+# holiday ref
+ref <- read_excel(paste0(datadir, "/transaction.xlsx"), sheet = "holiday")
+ref <- ref %>% 
+  select(date, holiday) %>% 
+  filter(!is.na(holiday))
+
+# flag holiday
+df <- df %>% 
+  mutate(daytype = ifelse(date %in% ref$date, "Holiday", daytype)) %>%
+  filter(date < today())
+
+# tibble time!
+df <- df %>%
+  mutate(with = ifelse(grepl("Wak J|Kak A", place), "Family", with),
+         tgt = ifelse(with == "-" | is.na(with), 0, 1),
+         with = map(strsplit(with, ","), trimws),
+         n = map_int(with, length),
+         n = ifelse(tgt == 0, 0, n))
+
+# normalize and abbreviate the name
+df_with <- unnest(df) %>%
+  filter(!grepl("Fam|Wak", with), tgt == 1) %>%
+  count(with, sort = TRUE) %>%
+  mutate(with_abb = gsub("[aiueo]", "", gsub("[^A-z]", "", with)),
+         with_abb = paste0(substr(with_abb, 1, 1), 
+                           substr(with_abb, nchar(with_abb), nchar(with_abb)))) %>%
+  group_by(with_abb) %>%
+  mutate(row_number = row_number()) %>%
+  ungroup() %>%
+  mutate(with_abb = ifelse(row_number == 1, with_abb, paste0(with_abb, row_number))) %>%
+  select(-row_number, -nn) %>%
+  left_join(read_excel(paste0(datadir, "/transaction.xlsx"), sheet = "group")) %>%
+  replace_na(list(group = "Others"))
+```
+
+```{r}
+head(df)
+```
+
+## Overview
+
+```{r}
+df_ovw <- df %>%
+  filter(!is.na(with)) %>%
+  group_by(daytype) %>%
+  summarise(n_day = n(),
+            n_tgt = sum(tgt),
+            p_tgt = n_tgt / n_day,
+            n_mean = mean(n))
+df_ovw
+```
+
+```{r intro-dist}
+df %>%
+  filter(!is.na(with)) %>%
+  ggplot(aes(n, fill=daytype)) + geom_bar() +
+  theme_ipsum_rc(grid = "Y") +
+  labs(title = "Counts of Lunch Mate Distribution",
+       x = "# of Lunch Mate", y = NULL) +
+  scale_x_continuous(breaks = 0:20) +
+  theme(legend.position = c(1,1),
+        legend.justification = c(1,1)) +
+  scale_fill_discrete(NULL)
+```
+
+```{r, eval=FALSE, fig.height=6, fig.width=10, include=FALSE}
+df %>%
+  ggplot(aes(day(date), n)) + geom_line(linetype = "dashed") + 
+  geom_point(aes(color = factor(tgt))) +
+  facet_wrap(~month(date, label = TRUE), scales = "free_x") +
+  theme_ipsum_rc(grid = "") +
+  labs(x=NULL, y=NULL) +
+  scale_color_manual(NULL, labels = c("Alone", "Together"), values = c("#B2182B", "#2166AC")) +
+  theme(legend.position = c(1,0),
+        legend.justification = c(1,0),
+        axis.text = element_blank())
+```
+
+```{r intro-free}
+df %>%
+  filter(!is.na(with), daytype == "Weekday") %>%
+  count(month=month(date, label=TRUE), tgt) %>%
+  mutate(tgt = ifelse(tgt == 0, "alone", "together")) %>%
+  spread(tgt, nn) %>%
+  mutate(all = alone + together,
+         p_together = together / all) %>%
+  ggplot(aes(month, p_together, group=1)) + geom_point(color = "steelblue") +
+  geom_line(linetype="dashed", color = "steelblue") +
+  geom_text(aes(label = paste0(all, "\nwdays"), y = 0.13), 
+            family = "Roboto Condensed",
+            color = "#cccccc") +
+  theme_ipsum_rc(grid = "Y") +
+  labs(title = "Lunch with Friends during Weekday (Monthly)",
+       subtitle = paste(min(month(df$date, label = TRUE, abbr = FALSE)), "-",
+                        max(month(df$date, label = TRUE, abbr = FALSE)), "2017"),
+       x = NULL, y = "% of Lunch with Friends") +
+  scale_y_percent(expand = c(0,0), limits = c(0,1))
+```
+
+Seharusnya data ada sebanyak `r as.numeric(max(df$date)-min(df$date)+1)` namun data ada sebanyak `r nrow(df)`. Data makan siang saat puasa dan lebaran yaitu dari tanggal 27 Mei 2017 hingga 2 Juli 2017 tidak ada (selama 37 hari).
+
+---
+date: `r format(max(df$date), "%d %B %Y")` - `r format(max(df$date), "%d %B %Y")`
+---
+
+```{r}
+df_whom <- df %>%
+  filter(!grepl("Family|Wak J", with), 
+         !grepl("Kak A", place),
+         daytype == "Weekday") %>%
+  select(date, food, price, with, n_size=n) %>%
+  unnest() %>%
+  filter(with != "-") %>%
+  left_join(df_with) %>%
+  mutate(price_type = ifelse(price == 0, "Free", "Paid"))
+```
+
+Sedikit gambaran umum:
+
+- Total makan siang: `r nrow(df %>% filter(!is.na(with)))`
+- Total makan siang pas hari kerja: `r nrow(df %>% filter(!is.na(with), daytype == "Weekday"))`
+- Total makan siang bareng: `r nrow(df %>% filter(!is.na(with), daytype == "Weekday", tgt != 0))`
+- Total makan siang bareng gratis: `r nrow(df %>% filter(!is.na(with), daytype == "Weekday", tgt != 0, price == 0))`
+- Makan siang bareng / makan siang: `r nrow(df %>% filter(!is.na(with), daytype == "Weekday", tgt != 0)) / nrow(df %>% filter(!is.na(with), daytype == "Weekday"))`
+- Makan siang bareng (1 orang) / makan siang: `r nrow(df %>% filter(!is.na(with), daytype == "Weekday", tgt != 0, n == 1)) / nrow(df %>% filter(!is.na(with), daytype == "Weekday"))`
+- Makan siang bareng gratis / makan siang bareng: `r nrow(df %>% filter(!is.na(with), daytype == "Weekday", tgt != 0, price == 0)) / nrow(df %>% filter(!is.na(with), daytype == "Weekday", tgt != 0))`
+- Banyaknya kolega: `r df_whom$with %>% n_distinct()`
+- Banyaknya kombinasi kolega: `r df %>% filter(!is.na(with), daytype == "Weekday", !grepl("Fam|-", with)) %>% select(with) %>% unique() %>% nrow()`
+
+## Visualization
+
+### Whom?
+
+```{r whom}
+df_whom %>%
+  count(with_abb) %>%
+  mutate(p = n/filter(df_ovw, daytype == "Weekday")$n_tgt) %>%
+  top_n(10, n) %>%
+  ggplot(aes(p, reorder(with_abb, n))) +
+  geom_lollipop(horizontal = T, size=1.5, color="steelblue") +
+  labs(x=NULL, y=NULL) +
+       # title="Makan dengan Siapa?",
+       # subtitle=paste(format(min(df$date), "%d %B %Y"), "-", format(max(df$date), "%d %B %Y"))) +
+  theme_ipsum_rc(grid="X") +
+  scale_x_percent()
+```
+
+```{r whom-free}
+df_whom %>%
+  group_by(with_abb, group) %>%
+  summarise(n = n(),
+            n_size = mean(n_size),
+            n_size_med = median(n_size),
+            n_free = sum(ifelse(price_type == "Free", 1, 0)),
+            p_free = n_free / n) %>%
+  filter(n >= 5) %>%
+  ggplot(aes(n_size, p_free)) + 
+  geom_smooth(method = "lm", se = FALSE, linetype = "dashed", color = "#cccccc") +
+  geom_point(aes(size=n, color=group), alpha=0.7) + 
+  ggrepel::geom_text_repel(aes(label=with_abb), size=4, family="Roboto Condensed") +
+  theme_ipsum_rc() +
+  labs(x = "Average # of Lunch Mate", y = "% of Free Lunch") +
+  scale_y_percent() +
+  scale_x_continuous(expand = c(0,0), limits = c(0,9), breaks = seq(0,9,2)) +
+  scale_color_discrete("Group") +
+  scale_size_continuous("# of Lunch") +
+  theme(panel.grid.minor = element_blank())
+```
+
+```{r, eval=FALSE, include=FALSE}
+df_whom %>%
+  select(date, n_size) %>%
+  distinct() %>%
+  count(n_size)
+```
+
+```{r, eval=FALSE, include=FALSE}
+df_whom %>%
+  select(date, n_size, price_type) %>%
+  distinct() %>%
+  count(n_size, price_type) %>%
+  spread(price_type, n, fill=0) %>%
+  mutate(p_free = Free / (Free + Paid))
+```
+
+```{r, eval=FALSE, include=FALSE}
+df_whom_size <- df_whom %>%
+  mutate(n_size_group = as.factor(ifelse(n_size >= 5, ">=5", as.character(n_size)))) %>%
+  count(with_abb, n_size_group, sort=TRUE) %>%
+  group_by(with_abb) %>%
+  mutate(p = n/sum(n),
+         n_size_group = forcats::fct_relevel(n_size_group, "1", "2", "3", "4")) %>%
+  ungroup()
+df_whom_size
+df_whom_size %>%
+  inner_join(df_whom %>%
+               count(with_abb) %>%
+               filter(n >= 5) %>%
+               select(with_abb)) %>%
+  group_by(n_size_group) %>%
+  top_n(5, p) %>%
+  ungroup() %>%
+  arrange(p, desc(p)) %>%
+  ggplot(aes(with_abb, p, fill=n_size_group)) +
+  geom_col() + coord_flip() +
+  facet_wrap(~n_size_group, scales = "free") +
+  theme_ipsum_rc(grid = "X") +
+  guides(fill=FALSE) +
+  labs(x=NULL, y=NULL)
+```
+
+```{r, eval=FALSE, include=FALSE}
+df_whom %>%
+  select(date, price_type) %>%
+  distinct() %>%
+  count(price_type)
+```
+
+```{r, eval=FALSE, include=FALSE}
+df_whom %>%
+  count(price_type, with_abb, with) %>%
+  spread(price_type, n, fill=0) %>%
+  mutate(n = Free + Paid,
+         p_free = Free / n) %>%
+  filter(n >= 3) %>%
+  arrange(desc(p_free))
+```
+
+```{r whom-network-df}
+library(igraph)
+library(ggraph)
+library(widyr)
+
+df_pair <- df_whom %>%
+  pairwise_count(with_abb, date, sort=TRUE, upper = FALSE)
+```
+
+```{r whom-network-ggraph, eval=FALSE, include=FALSE}
+df_graph <- df_pair %>%
+  graph_from_data_frame()
+V(df_graph)$freq <- degree(df_graph, mode = "out")
+set.seed(999)
+df_graph %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE) +
+  geom_node_point(aes(size = freq, color = freq), show.legend = FALSE) +
+  geom_node_text(aes(label = name), vjust = 2, family = "DIN", show.legend = FALSE, repel = TRUE) +
+  theme_void() +
+  expand_limits(x = 0, y = 0)
+```
+
+```{r whom-network-visnetwork}
+library(visNetwork)
+nodes <- df_whom %>%
+  pairwise_count(with_abb, date, sort=TRUE) %>%
+  count(with_abb = item1, sort = TRUE) %>%
+  left_join(df_with) %>%
+  mutate(id = with_abb, label = with_abb, value = nn, font.size = 24)
+edges <- df_pair %>%
+  rename(from=item1, to=item2)
+visNetwork(nodes, edges, width = "100%", height = "300px") %>%
+  visInteraction(zoomView = FALSE, 
+                 dragNodes = FALSE) %>%
+  visOptions(highlightNearest = TRUE,
+             selectedBy = "group") %>%
+  visLayout(randomSeed = 150) %>%
+  visEdges(smooth = list(enabled = FALSE, type = "horizontal"))
+  # visGroups(groupname = "CETI", color = "blue")
+  # visLegend(width = 0.1)
+```
+
+```{r whom-network-d3, include=FALSE}
+library(networkD3)
+set.seed(12345)
+# simpleNetwork(df_pair, zoom=T, linkDistance=40, charge=-20, opacity=0.75,
+#               fontSize=12, height='100%', width='850px', linkColour="#d1d1d1")
+nodes <- nodes %>%
+  mutate(id = row_number()-1,
+         color = case_when(group == "CETI" ~ "#D73027",
+                           group == "CE" ~ "#E0F3F8",
+                           TRUE ~ "#4575B4"))
+edges2 <- edges %>%
+  inner_join(select(nodes, from=with_abb, source=id)) %>%
+  inner_join(select(nodes, to=with_abb, target=id))
+nw <- forceNetwork(Links = edges2, Nodes = nodes,
+                   Source = "source", Target = "target",
+                   Value = "n", NodeID = "with_abb",
+                   Group = "group", opacity = 0.9, Nodesize = "nn", 
+                   legend = TRUE, fontSize = 15, fontFamily = "Roboto Condensed", 
+                   linkDistance = 80, charge = -30, 
+                   opacityNoHover = 0.8, zoom = TRUE, 
+                   colourScale = JS("d3.scaleOrdinal(d3.schemeCategory10);"))
+nw
+saveNetwork(nw, file = "lunch_2017.html")
+```
+
+### Where?
+
+```{r where}
+df_where <- df %>%
+  filter(daytype == "Weekday", place != "-") %>%
+  count(place, sort = TRUE)
+df_where_top <- df_where %>%
+  top_n(10) %>%
+  arrange(desc(nn))
+df %>%
+  filter(daytype == "Weekday", place != "-") %>%
+  count(place, tgt, sort = TRUE) %>%
+  inner_join(df_where_top %>%
+               select(-nn) %>%
+               mutate(r = row_number())) %>%
+  mutate(place = factor(place, levels = rev(df_where_top$place)),
+         tgt = factor(ifelse(tgt == 1, "Yes", "No"), levels = c("Yes", "No"))) %>%
+  ggplot(aes(place, nn, fill=tgt)) + geom_col() +
+  coord_flip() +
+  theme_ipsum_rc(grid="") +
+  labs(x = NULL, y = NULL) + 
+       # title = "Makan di Mana?",
+       # subtitle=paste(format(min(df$date), "%d %B %Y"), "-", format(max(df$date), "%d %B %Y"))) +
+  scale_fill_brewer("Together", direction = -1) +
+  theme(legend.position = c(1,0),
+        legend.justification = c(1,0),
+        axis.text.x = element_blank())
+```
+
+Terdapat `r nrow(df_where)` tempat makan yang gue kunjungi selama 196 hari kerja. Tempat makan tersebut belum dihitung secara lebih detail apabila tempat makan merupakan *food court* seperti kantin BSM maupun ESDM.
+
+### What?
+
+```{r what, fig.width=6, fig.height=3}
+df_food <- df %>%
+  filter(daytype == "Weekday", place != "-") %>%
+  count(food, sort = TRUE) %>%
+  filter(food != "Nasi Ikan, Ayam, Daging") %>%
+  mutate(food_type = case_when(grepl("Ayam", food) ~ "Ayam",
+                               grepl("Ikan|Lele", food) ~ "Ikan",
+                               grepl("Soto", food) ~ "Soto",
+                               grepl("Telur", food) ~ "Telur",
+                               grepl("gado", tolower(food)) ~ "Gado-gado",
+                               grepl("Bakso|Mi |Mie |Bakmi|Yamin", food) ~ "Bakso & Mi",
+                               grepl("Roti", food) ~ "Roti",
+                               grepl("Rendang", food) ~ "Rendang",
+                               grepl("Bebek", food) ~ "Bebek",
+                               TRUE ~ food)) %>%
+  group_by(food_type) %>%
+  summarise(n = sum(nn),
+            var = n_distinct(food))
+wordcloud::wordcloud(df_food$food_type, df_food$n,
+                     random.order = FALSE,
+                     random.color = FALSE,
+                     colors = RColorBrewer::brewer.pal(9, "Blues"),
+                     family = "Roboto Condensed", min.freq = 1)
+```
+
+## Bonus
+
+```{r bonus, fig.width=8, fig.height=4.2}
+df %>%
+  filter(daytype == "Weekday", tgt == 1) %>%
+  mutate(price_type = ifelse(price == 0, "Free", "Paid")) %>%
+  complete(date = full_seq(df$date, 3600*24)) %>%
+  mutate(day = day(date), 
+         month = month(date, label = TRUE),
+         month = factor(month, levels = rev(levels(month))),
+         ag = ifelse(with == "Ago" & price == 0, "A", NA)) %>%
+  ggplot(aes(day, month, fill = price_type)) + geom_tile(color = "white") +
+  geom_text(aes(label = ag), show.legend = FALSE, family = "Roboto Condensed") +
+  theme_ipsum_rc(grid = "") +
+  theme(legend.position = "top") +
+  labs(x = "Day", y = "Month") +
+  scale_fill_brewer(NULL, palette = "Set2") +
+  scale_x_continuous(breaks = c(1:31), expand = c(0,0.3))
+```
+
+
