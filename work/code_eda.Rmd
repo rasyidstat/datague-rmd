@@ -1,0 +1,76 @@
+---
+title: "Data Gue - My Code"
+author: "Rasyid Ridha"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.path = paste0("figures/")
+)
+```
+
+My one year code statistics in workplace! You can try on your own R or Rmd code using [https://github.com/rasyidstat/codestats](https://github.com/rasyidstat/codestats ).
+
+## Preparation
+
+```{r library}
+library(tidyverse)
+# convert R and Rmd files to data frame
+# via https://github.com/rasyidstat/codestats 
+load("data/code_data.RData") 
+df_r
+df_rmd
+```
+
+## Overview
+
+```{r}
+df_ovw <- df_r %>%
+  summarise_if(is.numeric, sum) %>%
+  mutate(code = "R") %>%
+  gather(metrics, value, -code) %>%
+  rbind(df_rmd %>%
+          summarise_if(is.numeric, sum) %>%
+          mutate(code = "Rmd") %>%
+          gather(metrics, value, -code))
+df_all <- df_ovw %>%
+  group_by(metrics) %>%
+  summarise(value = sum(value))
+df_ovw %>%
+  group_by(code, metrics) %>%
+  summarise(value = sum(value)) %>%
+  spread(code, value) %>%
+  mutate(total = R+Rmd) %>%
+  arrange(desc(total))
+```
+
+`cnt_fill` is # of code lines
+
+## dplyr stats
+
+```{r pipe}
+pipe <- filter(df_all, metrics == "cnt_pipe") %>% .$value
+pipe
+```
+
+```{r dplyr function, fig.height=2, fig.width=7}
+df_all %>%
+  filter(grepl("filter|summarise|groupby|mutate|select", metrics)) %>%
+  mutate(metrics = gsub("cnt_", "", metrics),
+         metrics = gsub("groupby", "group_by", metrics)) %>%
+  ggplot(aes(reorder(metrics, value), value)) + 
+  geom_col(fill = "steelblue") + coord_flip() +
+  geom_text(aes(label = scales::comma(value)), family = "Roboto Condensed",
+            hjust = 1.5, color = "white") +
+  hrbrthemes::theme_ipsum_rc(grid = "", plot_margin = margin(5,5,5,5)) + 
+  labs(y = NULL, x = NULL) +
+  theme(axis.text.x = element_blank())
+```
+

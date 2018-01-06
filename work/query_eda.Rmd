@@ -1,0 +1,196 @@
+---
+title: "Data Gue - My Query Statistics"
+author: "Rasyid Ridha"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.path = paste0("figures/")
+)
+```
+
+## Preparation
+
+```{r library}
+library(tidyverse)
+library(lubridate)
+library(DBI)
+```
+
+```{r}
+con <- dbConnect(RSQLite::SQLite(), dbname = "data/db.sqlite")
+df_stat <- dbGetQuery(con, "select * from log_query")
+df_stat_clean <- df_stat %>%
+  as.tibble() %>%
+  mutate(dt_exec = ymd_hms(dt_exec),
+         dt_finish = ymd_hms(dt_finish),
+         dt = as.Date(dt_exec),
+         duration = dt_finish - dt_exec)
+df_stat_smr <- df_stat_clean %>%
+  count(dt, type) %>%
+  complete(dt = full_seq(dt, 1), type, fill = list(n = 0)) %>%
+  mutate(month = month(dt, label = TRUE, abbr = FALSE),
+         day = day(dt),
+         month = factor(month, levels = rev(unique(month))),
+         day_type = ifelse(wday(dt, label = TRUE) %in% c("Sat", "Sun"),
+                           "Weekend", "Weekday"),
+         day_type = ifelse(day_type == "Weekend", "W", NA_character_))
+```
+
+## Overall Summary
+
+```{r ovw, fig.height=2, fig.width=7}
+df_ovw <- df_stat_smr %>%
+  group_by(type) %>%
+  summarise(n = sum(n)) %>%
+  arrange(desc(n))
+df_ovw %>%
+  ggplot(aes(reorder(type, n), n)) + geom_col(fill = "steelblue") + coord_flip() +
+  geom_text(data = df_ovw %>%
+              filter(n >= 100), 
+            aes(label = scales::comma(n)), family = "Roboto Condensed",
+            hjust = 1.5, color = "white") +
+  geom_text(data = df_ovw %>%
+              filter(n <= 100), 
+            aes(label = scales::comma(n)), family = "Roboto Condensed",
+            hjust = -0.5, color = "black") +
+  hrbrthemes::theme_ipsum_rc(grid = "", plot_margin = margin(5,5,5,5)) + 
+  labs(y = NULL, x = NULL) +
+  theme(axis.text.x = element_blank())
+```
+
+```{r}
+df_stat_smr %>%
+  summarise(n = sum(n))
+```
+
+## Daily Summary
+
+```{r query stat, fig.width=9, fig.height=2.5}
+df_stat_smr %>%
+  filter(type == "query") %>%
+  mutate(cut = cut(n, c(0,1,5,10,20,40,80,Inf))) %>%
+  ggplot(aes(day, month)) + 
+  geom_tile(aes(fill = cut), color = "grey85") +
+  geom_text(aes(label = day_type), family = "Roboto Condensed") +
+  hrbrthemes::theme_ipsum_rc(grid="", plot_margin = margin(5,5,5,5)) +
+  scale_x_continuous(expand = c(0,0.3), breaks = 1:31) +
+  scale_fill_brewer(NULL) +
+  labs(x = NULL, y = NULL) +
+  theme(legend.position = "bottom")
+```
+
+```{r query stat 2, eval=FALSE, fig.height=2, fig.width=7, include=FALSE}
+# 12 - 3
+df_stat_smr %>%
+  filter(type == "query") %>%
+  mutate(cut = cut(n, c(0,1,5,10,20,40,80,Inf))) %>%
+  ggplot(aes(day, month)) + 
+  geom_tile(aes(fill = cut), color = "grey85") +
+  geom_text(aes(label = day_type), family = "Roboto Condensed") +
+  hrbrthemes::theme_ipsum_rc(grid="", plot_margin = margin(5,5,5,5)) +
+  scale_x_continuous(expand = c(0,0.3), breaks = 1:31) +
+  scale_fill_brewer(NULL) +
+  labs(x = NULL, y = NULL) +
+  theme(legend.position = "bottom")
+```
+
+```{r query stat ew, eval=FALSE, fig.height=3, fig.width=12, include=FALSE}
+type <- c("query", "glance", "table", "profile", "usage", "describe")
+df_stat_smr %>%
+  filter(type == "profile") %>%
+  mutate(cut = cut(n, c(0,1,5,10,20,40,80,Inf))) %>%
+  ggplot(aes(day, month)) + 
+  geom_tile(aes(fill = cut), color = "grey85") +
+  geom_text(aes(label = day_type), family = "DIN") +
+  hrbrthemes::theme_ipsum_rc(grid="", plot_margin = margin(5,5,5,5)) +
+  scale_x_continuous(expand = c(0,0.3), breaks = 1:31) +
+  scale_fill_brewer(NULL) +
+  labs(x = NULL, y = NULL) +
+  theme(legend.position = "bottom")
+```
+
+## Active Days
+
+```{r}
+df_stat_smr %>%
+  group_by(dt, day_type) %>%
+  summarise(n = sum(n)) %>%
+  mutate(day_type = ifelse(n == 0 && is.na(day_type), "N", day_type),
+         day_type = ifelse(is.na(day_type), "A", day_type)) %>%
+  ungroup() %>%
+  count(day_type)
+```
+
+## Query Duration
+
+```{r}
+df_stat_clean %>%
+  group_by(type) %>%
+  summarise(n = n(),
+            duration_sum = sum(duration),
+            duration_avg = mean(duration),
+            duration_min = min(duration),
+            duration_max = max(duration)) %>%
+  arrange(desc(n))
+```
+
+```{r}
+df_stat_clean %>%
+  summarise(n = n(),
+            duration_sum = sum(duration),
+            duration_avg = mean(duration),
+            duration_min = min(duration),
+            duration_max = max(duration)) %>%
+  mutate_at(vars(contains("duration")), funs(as.numeric(.)/60))
+```
+
+
+
+```{r}
+df_stat_clean %>%
+  filter(type == "glance") %>%
+  select(dt, query, duration) %>%
+  arrange(desc(duration)) %>%
+  head(10)
+```
+
+```{r}
+df_stat_clean %>%
+  filter(type == "query") %>%
+  ggplot(aes(size, duration)) + geom_point()
+```
+
+## Top Keywords
+
+```{r}
+library(tidytext)
+df_stat_clean %>%
+  filter(type == "query") %>%
+  select(query) %>%
+  unnest_tokens(word, query) %>%
+  count(word, sort = TRUE) %>%
+  head()
+```
+
+```{r eval=FALSE, include=FALSE}
+df_stat_clean %>%
+  filter(type == "query") %>%
+  select(query) %>%
+  unnest_tokens(word, query, token = "ngrams", n = 2) %>%
+  count(word, sort = TRUE)
+df_stat_clean %>%
+  filter(type == "query") %>%
+  select(query) %>%
+  unnest_tokens(word, query, token = "regex", pattern = "\\s") %>%
+  count(word, sort = TRUE)
+```
+
+
