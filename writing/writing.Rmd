@@ -1,0 +1,339 @@
+---
+title: "Data Gue - My Writing"
+author: "Rasyid Ridha"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.path = paste0("figs/")
+)
+```
+
+My 2016 - 2017 writing at "New Scratch" stats!
+
+## Preparation
+
+```{r}
+library(tidyverse)
+library(rvest)
+library(tidytext)
+library(stringr)
+library(lubridate)
+library(wordcloud)
+# library(rmarkdown)
+# I convert .docx to .html using
+# pandoc_convert(dir, to = "html", output = out)
+
+df_raw <- read_html("data/writing_raw.html")
+
+# clean data
+df_wr <- data_frame(txt = as.character(df_raw))
+df_wr <- df_wr %>%
+  unnest_tokens(post, txt, token="regex", pattern="(?=<h1)", to_lower=FALSE) %>%
+  filter(grepl("^<h1", post)) %>%
+  mutate(id=row_number()) %>%
+  select(id, post) %>%
+  mutate(date=str_extract(post, "(?<=<p>).*(?=\\s+â\u0080\u0093)"),
+         date=gsub("Januari", "January", date),
+         date=gsub("Februari", "February", date),
+         date=gsub("Maret", "March", date),
+         date=gsub("Juni", "June", date),
+         date=gsub("Juli", "July", date),
+         date=gsub("Agustus", "August", date),
+         date=gsub("Oktober", "October", date),
+         date=gsub("Desember", "December", date),
+         date=gsub("Mei", "May", date),
+         date=substring(date, 1, 100),
+         date_real=dmy(date))
+df_wr_det <- df_wr %>%
+  mutate(date = date_real) %>%
+  select(-date_real) %>%
+  unnest_tokens(content, post, token="regex", pattern="(?=<p)", to_lower=FALSE) %>%
+  mutate(type = case_when(grepl("<h1", content)~"title",
+                          grepl("<li>", content)~"list",
+                          TRUE~"paragraph")) 
+```
+
+```{r finalize}
+df_wr <- df_wr %>%
+  mutate(title = map_chr(post, function(x) html_text(html_nodes(read_html(x), "h1"))),
+         date = date_real) %>%
+  select(-post, -date_real)
+df_wr_det <- df_wr_det %>%
+  mutate(content = map_chr(content, function(x) html_text(read_html(x))),
+         content = gsub("?|â", "", content))
+df_wr_token <- df_wr_det %>%
+  mutate(id_pr = row_number()) %>%
+  select(id, id_pr, everything()) %>%
+  unnest_tokens(word, content, drop = FALSE)
+df_wr_token
+```
+
+## Overview
+
+```{r daily}
+# let's rock with forcats!
+df_daily <- df_wr %>%
+  count(date) %>%
+  filter(!is.na(date)) %>%
+  complete(date = full_seq(date, 1), fill = list(n = 0)) %>%
+  filter(!is.na(date)) %>%
+  mutate(day = day(date),
+         month = as.factor(zoo::as.yearmon(date)),
+         month = forcats::fct_rev(month),
+         month = forcats::fct_relabel(month, function(x) gsub("20", "'", x)),
+         day_type = ifelse(wday(date, label = TRUE) %in% c("Sat", "Sun"),
+                           "Weekend", "Weekday"),
+         day_type = ifelse(day_type == "Weekend", "W", NA_character_),
+         n = cut(n, c(0,2)),
+         n = forcats::fct_recode(n, Yes = "(0,2]")) 
+df_daily %>%
+  ggplot(aes(day, month)) + 
+  geom_tile(aes(fill = n), color = "grey85") +
+  geom_text(aes(label = day_type), family = "Roboto Condensed") +
+  # geom_point(data = df_daily %>%
+  #              filter(month == "Sep '17", day %in% 10:18), 
+  #           color = "darkorange", alpha = 0.5, size = 1) +
+  # geom_text(data = df_daily %>%
+  #            filter(month == "Sep '17", day %in% 10:18), 
+  #           color = "darkorange", alpha = 0.8,
+  #           aes(label = "S")) +
+  hrbrthemes::theme_ipsum_rc(grid="", plot_margin = margin(5,5,5,5)) +
+  scale_x_continuous(expand = c(0,0.3), breaks = 1:31) +
+  scale_fill_brewer("Writing?", palette = "Pastel2") +
+  labs(x = NULL, y = NULL) +
+  theme(legend.position = "bottom")
+```
+
+```{r}
+df_ovw <- df_wr_token %>%
+  inner_join(df_wr) %>%
+  mutate(year = year(date)) %>%
+  group_by(year) %>%
+  summarise(n = n(),
+            n_title = n_distinct(id)) %>%
+  mutate(w = n / n_title,
+         p_n = n / sum(n),
+         p_n_title = n_title / sum(n_title))
+df_ovw
+```
+
+```{r include=FALSE}
+df_date <- df_wr %>%
+  filter(!is.na(date)) %>%
+  summarise(min_date = min(date),
+            max_date = max(date))
+```
+
+Dari tahun 2016, tepatnya tanggal `r df_date$min_date` hingga tahun 2017, tepatnya tanggal `r df_date$max_date`, gue sudah menulis di "New Scratch" sebanyak `r sum(df_ovw$n_title)` tulisan yang terdiri dari `r sum(df_ovw$n)` kata, belum termasuk tulisan-tulisan lain yang bertebaran di berbagai macam canel.
+
+Secara rinci, di tahun 2016, gue sudah menulis sebanyak `r df_ovw$n[1]` kata, di tahun 2017 sebanyak `r df_ovw$n[2]` kata dan `r df_ovw$n[3]` kata tanpa keterangan waktu. Kenaikan mencapai `r round(df_ovw$n[2]/df_ovw$n[1],0)` kali dari tahun 2016 ke tahun 2017, namun perlu digarisbawahi bahwa pada tahun 2016, tulisan dimulai pada bulan kelima yaitu bulan Mei.
+
+```{r monthly, fig.width=8, fig.height=4}
+df_wr_token %>%
+  inner_join(df_wr) %>%
+  mutate(year = year(date),
+         month = month(date, label = TRUE)) %>%
+  group_by(month, year) %>%
+  summarise(n = n(),
+            n_title = n_distinct(id)) %>%
+  filter(!is.na(year)) %>%
+  ggplot(aes(month, n_title, color = factor(year), group = year)) + 
+  geom_point() + geom_line() +
+  geom_text(aes(label = paste(scales::comma(n), "\nwords")),
+            family = "Roboto Condensed", vjust=1.8, size = 3) +
+  hrbrthemes::theme_ipsum_rc(grid = "Yy", plot_margin = margin(5,5,5,5)) +
+  theme(legend.justification = c(0,1),
+        legend.position = c(0,1)) +
+  scale_color_brewer(NULL, palette = "Pastel1") +
+  scale_y_continuous(limits = c(0,30)) +
+  labs(x = NULL, y = "# of Writings")
+```
+
+## The Words
+
+### Wordcloud
+
+```{r writing-wc, fig.width=6, fig.height=3.5}
+df_top_all <- df_wr_token %>%
+  inner_join(df_wr) %>%
+  anti_join(stop_words) %>%
+  anti_join(readLines("data/sw.txt", warn=FALSE) %>%
+              data_frame(word=.)) %>%
+  anti_join(readLines("data/gaul.txt", warn=FALSE) %>%
+              data_frame(word=.)) %>%
+  count(word, sort = TRUE)
+wordcloud(df_top_all$word, df_top_all$n,
+          random.order = FALSE,
+          random.color = FALSE,
+          max.words = 100,
+          colors=(brewer.pal(8, "Paired")),
+          family="Roboto Condensed")
+```
+
+```{r data}
+df_wr_token %>%
+  select(id, word) %>%
+  mutate(have_data = ifelse(word %in% "data", 1, 0)) %>%
+  group_by(id) %>%
+  summarise(have_data = max(have_data)) %>%
+  count(have_data)
+```
+
+### 2016 to 2017 Shifting Words
+
+```{r 2016-2017-change}
+df_top_yearly <- df_wr_token %>%
+  inner_join(df_wr) %>%
+  mutate(year = year(date)) %>%
+  anti_join(stop_words) %>%
+  anti_join(readLines("data/sw.txt", warn=FALSE) %>%
+              data_frame(word=.)) %>%
+  anti_join(readLines("data/gaul.txt", warn=FALSE) %>%
+              data_frame(word=.)) %>%
+  count(year, word, sort = TRUE) %>%
+  # inner_join(select(df_ovw, year, n_all=n)) %>%
+  # mutate(p = n / n_all) %>%
+  group_by(year) %>%
+  mutate(p = n / sum(n)) %>%
+  filter(!is.na(year)) %>%
+  ungroup()
+df_top_yearly
+df_change <- df_top_yearly %>%
+  select(year, word, p) %>%
+  spread(year, p) %>%
+  left_join(df_top_yearly %>%
+               group_by(word) %>%
+               summarise(n = sum(n)) %>%
+               ungroup()) %>%
+  arrange(-n) %>%
+  mutate(p_change = (`2017`-`2016`)/`2016`,
+         ratio = ifelse(p_change > 0, `2017`/`2016`, `2016`/`2017`)) %>%
+  arrange(-p_change)
+df_change %>%
+  filter(n >= 100) %>%
+  mutate(p_change_abs = abs(p_change),
+         dirc = ifelse(p_change > 0, "Increased (2017:2016)", "Decreased (2016:2017)")) %>%
+  top_n(20, ratio) %>%
+  ggplot(aes(reorder(word, ratio), ratio, fill = dirc)) + 
+  geom_col() + coord_flip() +
+  geom_text(aes(label = paste0(round(ratio, 2), "x"), color = dirc), 
+            hjust = -0.2, family = "Roboto Condensed") +
+  hrbrthemes::theme_ipsum_rc(grid = "", plot_margin = margin(5,5,5,5)) +
+  theme(legend.justification = c(1,0),
+        legend.position = c(1,0)) +
+  scale_fill_brewer(NULL, palette = "Pastel1") +
+  scale_color_brewer(NULL, palette = "Pastel1") +
+  scale_y_continuous(expand = c(0,0.3), limits = c(0, 40)) +
+  labs(x = NULL,
+       y = NULL,
+       caption = "Only words with occurence >=100") +
+  theme(axis.text.x = element_blank())
+```
+
+### Monthly Top Words 2017
+
+```{r monthly-top, fig.width=12}
+df_top_monthly <- df_wr_token %>%
+  inner_join(df_wr) %>%
+  mutate(year = year(date),
+         month = month(date, label = TRUE)) %>%
+  anti_join(stop_words) %>%
+  anti_join(readLines("data/sw.txt", warn=FALSE) %>%
+              data_frame(word=.)) %>%
+  anti_join(readLines("data/gaul.txt", warn=FALSE) %>%
+              data_frame(word=.)) %>%
+  count(year, month, word, sort = TRUE) %>%
+  filter(!is.na(year)) %>%
+  arrange(month, -year)
+df_top_monthly %>%
+  filter(year == 2017) %>%
+  group_by(month, year) %>%
+  top_n(10) %>%
+  mutate(n_order = rev(row_number())) %>%
+  left_join(df_top_yearly %>%
+              filter(year == 2017) %>%
+              top_n(10) %>%
+              select(word) %>%
+              mutate(top = "Yes")) %>%
+  replace_na(list(top = "No")) %>%
+  ggplot(aes(month, n_order)) +
+  geom_text(aes(label = word, size = n, color = top),
+            family = "Roboto Condensed") +
+  hrbrthemes::theme_ipsum_rc(grid = "", plot_margin = margin(5,5,5,5)) +
+  theme(legend.position = "top",
+        axis.text.y = element_blank()) +
+  labs(x = NULL, y = NULL) +
+  scale_x_discrete(labels = paste0(unique(df_top_monthly$month), "\n2017")) +
+  scale_size("Count", range = c(4,7)) +
+  scale_color_manual(NULL, values = c("Yes" = "grey60",
+                                      "No" = "darkorange"), 
+                     labels = c("Included in top 10 all words", 
+                                "Not included in top 10 all words"))
+```
+
+### Words Unsaid in Different Years
+
+```{r}
+df_change %>%
+  filter(is.na(`2016`) | is.na(`2017`)) %>%
+  select(-p_change, -ratio) %>%
+  mutate(year = case_when(is.na(`2016`)~"2017",
+                          is.na(`2017`)~"2016")) %>%
+  select(-`2016`, -`2017`) %>%
+  group_by(year) %>%
+  top_n(20, n)
+```
+
+### Words Relationship
+
+```{r word-network, fig.width=8, fig.height=7}
+library(widyr)
+library(igraph)
+library(ggraph)
+df_word_pair <- df_wr_token %>%
+  anti_join(stop_words) %>%
+  anti_join(readLines("data/sw.txt", warn=FALSE) %>%
+              data_frame(word=.)) %>%
+  anti_join(readLines("data/gaul.txt", warn=FALSE) %>%
+              data_frame(word=.)) %>%
+  pairwise_count(word, id_pr, upper = FALSE) %>%
+  group_by(item1, item2) %>%
+  summarise(n = sum(n)) %>%
+  arrange(-n) %>%
+  filter(n >= 20)
+# df_vertice <- df_change %>%
+#   mutate(type = case_when(is.na(`2016`)~"2017",
+#                           is.na(`2017`)~"2016",
+#                           TRUE~"Both")) %>%
+#   select(item = word, type) %>%
+#   filter(item %in% c(unique(df_word_pair$item1),
+#                      unique(df_word_pair$item2)))
+df_graph <- df_word_pair %>%
+  filter(n >= 20) %>%
+  graph_from_data_frame()
+V(df_graph)$freq <- degree(df_graph, mode = "all")
+df_graph %>%
+  ggraph() +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE) +
+  geom_node_point(aes(size = freq*1.1), color = "black") +
+  geom_node_point(aes(size = freq), color = "white") +
+  geom_node_text(aes(label = name, size = freq), 
+                 family = "Roboto Condensed", 
+                 color = "steelblue", 
+                 show.legend = FALSE, repel = TRUE) +
+  theme_void(base_family = "Roboto Condensed") +
+  expand_limits(x = 0, y = 0) +
+  scale_size("Freq", range = c(3,7), guide = FALSE) +
+  labs(caption = "Jurnal Harian Rasyid Ridha 'New Scratch' 2016-2017\nrasyidridha.com") +
+  theme(plot.caption = element_text(color = "grey50"))
+```
+
+
