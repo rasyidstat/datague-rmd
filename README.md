@@ -6,3 +6,4 @@ The collection of code and R Markdown for DataGue posts at [http://rasyidridha.c
 - Lunch 2017 [here](http://rasyidridha.com/datague-rmd/lunch/lunch.html)
 - Code Stats 2017: R and Rmd [here](http://rasyidridha.com/datague-rmd/work/code_eda.html)
 - Code Stats 2017: SQL [here](http://rasyidridha.com/datague-rmd/work/query_eda.html)
+- Writing 2016-2017 [here](http://rasyidridha.com/datague-rmd/writing/writing.html)
